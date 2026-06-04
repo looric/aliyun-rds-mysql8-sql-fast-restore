@@ -1,0 +1,32 @@
+name: Feature request
+about: Suggest an improvement or new restore option
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What restore scenario or operational pain point should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, command-line option, or documentation change you expect.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Environment, if relevant
+      placeholder: Alibaba Cloud Linux 3, Python 3.6.8, MySQL 8.0.45
+    validations:
+      required: false
