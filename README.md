@@ -604,12 +604,6 @@ python3 -m unittest discover -s tests -v
 
 CI 默认在 Python 3.8 / 3.10 / 3.12 上运行语法检查和单元测试，并保留 Python 3.6 grammar 兼容检查。Python 3.6.8 是运行兼容底线；如果你有自托管 runner，也可以额外加入 Python 3.6.8 实机测试。
 
-推荐在 GitHub 仓库主页添加 Topics：
-
-```text
-mysql, aliyun-rds, rds, database-backup, dba-tools, python, data-recovery, mysql-8
-```
-
 ## 非目标
 
 本项目不做：
