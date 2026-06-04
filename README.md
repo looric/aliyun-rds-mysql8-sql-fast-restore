@@ -256,8 +256,6 @@ python3 restore_sql_fast.py /home/mysql/data 127.0.0.1 3306 root \
 
 ### 方式一：从 GitHub Release 下载单文件
 
-项目发布到 GitHub 后，推荐把 `restore_sql_fast.py` 作为 Release Asset 上传。使用者可以直接下载单文件运行：
-
 ```bash
 wget https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
 chmod +x restore_sql_fast.py
@@ -266,7 +264,7 @@ chmod +x restore_sql_fast.py
 ### 方式二：克隆仓库
 
 ```bash
-git clone https://github.com/<OWNER>/aliyun-rds-mysql8-sql-fast-restore.git
+git clone https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore.git
 cd aliyun-rds-mysql8-sql-fast-restore
 chmod +x restore_sql_fast.py
 ```
