@@ -1,0 +1,86 @@
+name: Bug report
+about: Report a restore failure or unexpected behavior
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please remove passwords, real RDS backup URLs, IP addresses, and business-sensitive data before submitting logs.
+  - type: input
+    id: version
+    attributes:
+      label: Tool version
+      description: Output of `python3 restore_sql_fast.py --version`.
+      placeholder: restore_sql_fast.py v260605
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Alibaba Cloud Linux release 3 / CentOS 7 / Rocky Linux 8
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: Python 3.6.8
+    validations:
+      required: true
+  - type: input
+    id: mysql_server
+    attributes:
+      label: MySQL server version
+      placeholder: MySQL 8.0.45
+    validations:
+      required: true
+  - type: input
+    id: mysql_client
+    attributes:
+      label: MySQL client version
+      placeholder: mysql  Ver 8.0.x
+    validations:
+      required: false
+  - type: dropdown
+    id: layout
+    attributes:
+      label: Backup layout
+      options:
+        - flat single-database layout
+        - nested multi-database layout
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command used
+      description: Mask passwords, tokens, IP addresses, and real backup URLs.
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: error_log
+    attributes:
+      label: Error log
+      description: Include the first ERROR line and several lines before/after it. Mask sensitive data.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: structure
+    attributes:
+      label: Minimal directory structure
+      description: Output from `find <backup_dir> -maxdepth 3 -type f | head -50`, with sensitive names masked if needed.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Mention whether the failing table contains generated columns, whether `local_infile` is enabled, and whether `--input-mode stream` was tried.
+    validations:
+      required: false
