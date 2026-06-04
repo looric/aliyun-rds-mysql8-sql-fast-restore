@@ -1,0 +1,17 @@
+/home/mysql/data/
+|-- service2023db/
+|   |-- structure.sql
+|   |-- t_week_channel/
+|   |   |-- structure.sql
+|   |   `-- data/
+|   |       `-- t_week_channel_0_part0.sql
+|   `-- t_work_day/
+|       |-- structure.sql
+|       `-- data/
+|           `-- t_work_day_0_part0.sql
+`-- service2024report/
+    |-- structure.sql
+    `-- metabase_field/
+        |-- structure.sql
+        `-- data/
+            `-- metabase_field_0_part0.sql
