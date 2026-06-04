@@ -1,4 +1,4 @@
-# 阿里云RDS MySQL 8.x 快照备份SQL文件快速恢复到自建数据库
+# 阿里云RDS MySQL 8.x 快照备份快速恢复到自建数据库
 
 <p align="center">
   <b>将阿里云 RDS MySQL 云盘实例“下载备份”得到的 SQL 文件目录快速恢复到自建 MySQL 8.x</b><br>
