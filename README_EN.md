@@ -62,7 +62,7 @@ local_infile=1
 From source:
 
 ```bash
-git clone https://github.com/<OWNER>/aliyun-rds-mysql8-sql-fast-restore.git
+git clone https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore.git
 cd aliyun-rds-mysql8-sql-fast-restore
 chmod +x restore_sql_fast.py
 ```
@@ -70,7 +70,7 @@ chmod +x restore_sql_fast.py
 From GitHub Releases after you publish the project:
 
 ```bash
-wget https://github.com/<OWNER>/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
+wget https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
 chmod +x restore_sql_fast.py
 ```
 
