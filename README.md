@@ -14,7 +14,8 @@
   <img alt="MySQL 8.x" src="https://img.shields.io/badge/mysql-8.x-orange">
   <img alt="SQL only" src="https://img.shields.io/badge/mode-SQL--only-success">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey">
-  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green">
+  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"> 
+  
   [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml)
   
 </p>
