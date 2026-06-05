@@ -6,10 +6,7 @@
   SQL-only · Python 3.6.8+ · Linux only · Zero dependencies · 表级并发导入
   </p>
 
-<p align="center">  
-    
-     [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml) 
-     
+<p align="center">        
   <img alt="Version" src="https://img.shields.io/badge/release-v260605-blue">  
   <img alt="Python 3.6+" src="https://img.shields.io/badge/python-3.6%2B-blue">
   <img alt="Linux only" src="https://img.shields.io/badge/platform-Linux-lightgrey">
@@ -19,6 +16,7 @@
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"> 
 </p>
 
+     [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml) 
 
 ## 项目定位
 
