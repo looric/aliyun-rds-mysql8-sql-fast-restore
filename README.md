@@ -3,8 +3,6 @@
 
 <p align="center">
   <b>将阿里云 RDS MySQL 云盘实例“下载备份”得到的 SQL 文件目录快速恢复到自建 MySQL 8.x</b><br>
-  
-    [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml) <br>
   SQL-only · Python 3.6.8+ · Linux only · Zero dependencies · 表级并发导入
 </p>
 
@@ -13,11 +11,11 @@
   <img alt="Version" src="https://img.shields.io/badge/release-v260605-blue">  
   <img alt="Python 3.6+" src="https://img.shields.io/badge/python-3.6%2B-blue">
   <img alt="Linux only" src="https://img.shields.io/badge/platform-Linux-lightgrey">
-  <img alt="MySQL 8.x" src="https://img.shields.io/badge/mysql-8.x-orange">
+  <img alt="MySQL 8.x" src="https://img.shields.io/badge/mysql-8.x-orange"> <br>
   <img alt="SQL only" src="https://img.shields.io/badge/mode-SQL--only-success">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"> 
-  
+   [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml) 
 
   
 </p>
