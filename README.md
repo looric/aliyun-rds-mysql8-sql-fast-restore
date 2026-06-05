@@ -15,9 +15,9 @@
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"> 
 </p>
-
-     [![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml) 
-
+<p align="center">        
+[![CI](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg)](https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml)
+</p>
 ## 项目定位
 
 本项目用于将 **阿里云 RDS MySQL 8.x 云盘实例快照备份** 通过“下载备份”功能转换得到的 **SQL 文件目录**，快速恢复到 ECS、本地服务器或其他自建 MySQL 8.x 实例。
