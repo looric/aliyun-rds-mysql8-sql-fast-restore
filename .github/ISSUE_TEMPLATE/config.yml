@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Alibaba Cloud RDS restore documentation
-    url: https://help.aliyun.com/zh/rds/apsaradb-rds-for-mysql/restore-the-data-of-an-apsaradb-rds-for-mysql-instance-to-a-self-managed-mysql-instance-by-using-a-csv-file-or-an-sql-file
-    about: Official background documentation for RDS MySQL snapshot backup restore.
+  - name: Security note
+    url: https://github.com/
+    about: Do not post passwords, real RDS backup URLs, or business data in public issues.
