@@ -158,5 +158,139 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(plans[0].db_name, "db2")
 
 
+class RobustnessTests(unittest.TestCase):
+    def make_runtime_args(self, **overrides):
+        values = dict(
+            dry_run=False,
+            defaults_extra_file=None,
+            auth_method="defaults-extra-file",
+            ask_password=False,
+            password_file=None,
+            db_pass=None,
+            login_path=None,
+            mysql="mysql",
+            db_host="127.0.0.1",
+            db_port="3306",
+            db_user="root",
+            default_character_set="utf8mb4",
+            max_allowed_packet="1G",
+            force=False,
+            compression_algorithms=None,
+            mysql_extra_args=[],
+            disable_binlog=False,
+            no_transaction=False,
+            keep_manifests_dir=None,
+            generated_column_mode="default",
+            input_mode="source",
+            chunk_size=restore.DEFAULT_CHUNK_SIZE,
+            process_cleanup_timeout=0.01,
+        )
+        values.update(overrides)
+        return argparse.Namespace(**values)
+
+    def test_common_session_init_is_shared_by_source_and_stream(self):
+        args = self.make_runtime_args(disable_binlog=True, no_transaction=False)
+        sql = restore.common_session_init_sql(args, data_mode=True)
+        self.assertIn("SET SESSION sql_log_bin=0;", sql)
+        self.assertIn("SET SESSION foreign_key_checks=0;", sql)
+        self.assertIn("SET SESSION unique_checks=0;", sql)
+        self.assertIn("SET SESSION autocommit=0;", sql)
+        self.assertNotIn("autocommit", restore.common_session_init_sql(args, data_mode=False))
+
+    def test_source_data_manifest_contains_bulk_load_session_settings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            keep = root / "manifests"
+            keep.mkdir()
+            data = root / "t1_0_part0.sql"
+            data.write_text("INSERT INTO `db1`.`t1` VALUES (1);\n", encoding="utf-8")
+            table = restore.TablePlan("db1", "t1", root, root / "structure.sql", [data])
+            args = self.make_runtime_args(keep_manifests_dir=str(keep), disable_binlog=True)
+            auth = restore.AuthManager(args)
+            captured = {}
+            old = restore.run_mysql_from_manifest
+
+            def fake_run(call_args, call_auth, manifest_path, description, data_mode):
+                captured["description"] = description
+                captured["data_mode"] = data_mode
+                captured["text"] = Path(manifest_path).read_text(encoding="utf-8")
+
+            restore.run_mysql_from_manifest = fake_run
+            try:
+                restore.import_table_data_source(args, auth, table)
+            finally:
+                restore.run_mysql_from_manifest = old
+            self.assertEqual(captured["description"], "data db1.t1")
+            self.assertTrue(captured["data_mode"])
+            self.assertIn("SET SESSION sql_log_bin=0;", captured["text"])
+            self.assertIn("SET SESSION foreign_key_checks=0;", captured["text"])
+            self.assertIn("SET SESSION unique_checks=0;", captured["text"])
+            self.assertIn("SET SESSION autocommit=0;", captured["text"])
+            self.assertIn("source ", captured["text"])
+
+    def test_write_bytes_reports_broken_pipe(self):
+        class BadStdin(object):
+            def write(self, data):
+                raise BrokenPipeError("closed")
+
+        class FakeProc(object):
+            stdin = BadStdin()
+            def poll(self):
+                return 1
+
+        with self.assertRaises(RuntimeError) as ctx:
+            restore.write_bytes(FakeProc(), b"SELECT 1")
+        self.assertIn("closed stdin", str(ctx.exception))
+
+    def test_close_stdin_ignores_broken_pipe(self):
+        class BadStdin(object):
+            def close(self):
+                raise BrokenPipeError("closed")
+
+        class FakeProc(object):
+            stdin = BadStdin()
+
+        restore.close_stdin(FakeProc())
+
+    def test_flush_stdin_reports_broken_pipe(self):
+        class BadStdin(object):
+            def flush(self):
+                raise BrokenPipeError("closed")
+
+        class FakeProc(object):
+            stdin = BadStdin()
+            def poll(self):
+                return 2
+
+        with self.assertRaises(RuntimeError) as ctx:
+            restore.flush_stdin(FakeProc(), "test import")
+        self.assertIn("flushing input", str(ctx.exception))
+
+    def test_auth_manager_exit_does_not_mask_restore_exception(self):
+        args = self.make_runtime_args()
+        auth = restore.AuthManager(args)
+        old = restore.cleanup_temp_files
+
+        def bad_cleanup(paths):
+            raise OSError("cleanup failed")
+
+        restore.cleanup_temp_files = bad_cleanup
+        try:
+            self.assertFalse(auth.__exit__(RuntimeError, RuntimeError("restore failed"), None))
+        finally:
+            restore.cleanup_temp_files = old
+
+    def test_sql_parser_helpers_ignore_quoted_text_and_comments(self):
+        text = "INSERT INTO `t` (`id`, `values_col`) VALUES (1, 'not VALUES'), (2, 'x,y');"
+        pos = restore.find_keyword_outside(text, "VALUES", 0)
+        self.assertGreater(pos, text.index("`values_col`"))
+        self.assertEqual(text[pos:pos + len("VALUES")].upper(), "VALUES")
+        parts = restore.split_top_level_commas("`a`, concat('x,y', func(1,2)), /* c,d */ `b`")
+        self.assertEqual([part.strip() for part in parts], ["`a`", "concat('x,y', func(1,2))", "/* c,d */ `b`"])
+        ident, end = restore.parse_backtick_identifier("`a``b` tail")
+        self.assertEqual(ident, "a`b")
+        self.assertEqual(end, len("`a``b`"))
+
+
 if __name__ == "__main__":
     unittest.main()
