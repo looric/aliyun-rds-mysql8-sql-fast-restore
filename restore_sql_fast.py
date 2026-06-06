@@ -44,7 +44,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TextIO, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, TextIO, Tuple, Union
 
 STRUCTURE_FILE_NAME = "structure.sql"
 DATA_PATH_PREFIX = "data"
@@ -54,8 +54,9 @@ STATEMENT_SCAN_BUFFER_LIMIT = 1024 * 1024
 DEFAULT_PROCESS_CLEANUP_TIMEOUT = 5.0
 REWRITE_OVERLAP_BYTES = 4096
 SOURCE_SAFE_PATH_RE = re.compile(r"^[A-Za-z0-9_./-]+$")
+SOURCE_SAFE_CHAR_RE = re.compile(r"[A-Za-z0-9_./-]")
 
-__version__ = "v260605"
+__version__ = "v260606"
 
 LOGGER = logging.getLogger("mysql_sql_fast_restore")
 ACTIVE_PROCS_LOCK = threading.Lock()
@@ -72,7 +73,7 @@ CREATE_DB_PLAIN_RE = re.compile(
     r"(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z0-9_$.-]+)"
 )
 CREATE_DB_REWRITE_BYTES_RE = re.compile(
-    br"(?is)(^|\xef\xbb\xbf|[;\r\n])([ \t\r\n]*)CREATE\s+(DATABASE|SCHEMA)\s+"
+    br"(?i)(^|\xef\xbb\xbf|[;\r\n])([ \t\r\n]*)CREATE\s+(DATABASE|SCHEMA)\s+"
     br"(?!IF\s+NOT\s+EXISTS\b)"
     br"(?!/\*![0-9]{5}\s+IF\s+NOT\s+EXISTS\s*\*/)"
 )
@@ -107,9 +108,9 @@ def die(message: str, code: int = 1) -> None:
     sys.exit(code)
 
 
-def natural_key(value: str) -> List[Any]:
+def natural_key(value: str) -> List[Union[int, str]]:
     parts = re.split(r"(\d+)", value)
-    key = []  # type: List[Any]
+    key = []  # type: List[Union[int, str]]
     for part in parts:
         key.append(int(part) if part.isdigit() else part.lower())
     return key
@@ -915,7 +916,11 @@ class AuthManager(object):
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
-        cleanup_temp_files(self.temp_files)
+        try:
+            cleanup_temp_files(self.temp_files)
+        except Exception:
+            # Do not mask the original restore error with a cleanup failure.
+            LOGGER.debug("failed to cleanup authentication temporary files", exc_info=True)
         return False
 
     def option_args(self) -> List[str]:
@@ -1246,20 +1251,42 @@ def cleanup_manifests(args: argparse.Namespace, paths: Iterable[Path]) -> None:
 def require_source_safe_path(path: Path) -> None:
     text = str(path)
     if not SOURCE_SAFE_PATH_RE.match(text):
+        bad_chars = []  # type: List[str]
+        seen = set()  # type: Set[str]
+        for ch in text:
+            if SOURCE_SAFE_CHAR_RE.fullmatch(ch):
+                continue
+            if ch not in seen:
+                seen.add(ch)
+                bad_chars.append(repr(ch))
+        detail = ", ".join(bad_chars[:8]) + (" ..." if len(bad_chars) > 8 else "")
         raise RuntimeError(
             f"file path contains characters unsafe for mysql source mode: {path}. "
-            "Allowed characters are letters, digits, underscore, dot, slash, and hyphen. "
-            "Move the backup directory to a simpler path or run with --input-mode stream."
+            f"Unsafe character(s): {detail or '<unknown>'}. "
+            "source mode only allows letters, digits, underscore, dot, slash, and hyphen because mysql source has limited path quoting. "
+            "Move the backup directory to a simpler ASCII path or run with --input-mode stream."
         )
 
 
+def common_session_init_sql(args: argparse.Namespace, data_mode: bool) -> str:
+    lines = []  # type: List[str]
+    # Put sql_log_bin first so all following session statements and import work
+    # happen in the intended binlog mode.
+    if getattr(args, "disable_binlog", False):
+        lines.append("SET SESSION sql_log_bin=0;\n")
+    lines.append("SET SESSION foreign_key_checks=0;\n")
+    lines.append("SET SESSION unique_checks=0;\n")
+    if data_mode and not getattr(args, "no_transaction", False):
+        lines.append("SET SESSION autocommit=0;\n")
+    return "".join(lines)
+
+
 def write_common_session_init(fh: TextIO, args: argparse.Namespace, data_mode: bool) -> None:
-    fh.write("SET SESSION foreign_key_checks=0;\n")
-    fh.write("SET SESSION unique_checks=0;\n")
-    if args.disable_binlog:
-        fh.write("SET SESSION sql_log_bin=0;\n")
-    if data_mode and not args.no_transaction:
-        fh.write("SET SESSION autocommit=0;\n")
+    fh.write(common_session_init_sql(args, data_mode))
+
+
+def write_common_session_init_to_proc(proc: subprocess.Popen, args: argparse.Namespace, data_mode: bool) -> None:
+    write_sql(proc, common_session_init_sql(args, data_mode))
 
 
 def make_manifest(prefix: str, keep_dir: Optional[str]) -> Path:
@@ -1423,13 +1450,23 @@ def close_stdin(proc: subprocess.Popen) -> None:
         return
     try:
         proc.stdin.close()
-    except Exception:
-        pass
+    except (BrokenPipeError, OSError, ValueError):
+        LOGGER.debug("mysql stdin was already closed while cleaning up", exc_info=True)
 
 
-def run_mysql_from_manifest(args: argparse.Namespace, auth: AuthManager, manifest_path: Path, description: str) -> None:
+def flush_stdin(proc: subprocess.Popen, description: str) -> None:
+    if proc.stdin is None:
+        return
+    try:
+        proc.stdin.flush()
+    except (BrokenPipeError, OSError, ValueError) as exc:
+        rc = proc.poll()
+        raise RuntimeError(f"mysql process closed stdin while flushing input for {description}; exit_code={rc}") from exc
+
+
+def run_mysql_from_manifest(args: argparse.Namespace, auth: AuthManager, manifest_path: Path, description: str, data_mode: bool) -> None:
     cmd = mysql_base_args(args, auth, binary_mode=False)
-    LOGGER.info("mysql start: %s: %s < %s", description, redact_mysql_command(cmd), manifest_path)
+    LOGGER.info("mysql start: %s: %s < %s; data_mode=%s", description, redact_mysql_command(cmd), manifest_path, data_mode)
     if args.dry_run:
         return
     proc = None  # type: Optional[subprocess.Popen]
@@ -1490,7 +1527,7 @@ def import_structure_source(args: argparse.Namespace, auth: AuthManager, db_plan
                     require_source_safe_path(table.structure_file)
                     fh.write(f"SELECT {sql_string('structure table ' + table.full_name())} AS restore_progress;\n")
                     fh.write(f"source {table.structure_file}\n")
-        run_mysql_from_manifest(args, auth, manifest_path, "all structures")
+        run_mysql_from_manifest(args, auth, manifest_path, "all structures", data_mode=False)
     finally:
         cleanup_manifests(args, [manifest_path])
         cleanup_manifests(args, temp_files)
@@ -1530,7 +1567,7 @@ def import_table_data_source(args: argparse.Namespace, auth: AuthManager, table:
                 fh.write(f"source {path}\n")
                 if not args.no_transaction:
                     fh.write("COMMIT;\n")
-        run_mysql_from_manifest(args, auth, manifest_path, f"data {table.full_name()}")
+        run_mysql_from_manifest(args, auth, manifest_path, f"data {table.full_name()}", data_mode=True)
     finally:
         cleanup_manifests(args, [manifest_path])
 
@@ -1538,7 +1575,11 @@ def import_table_data_source(args: argparse.Namespace, auth: AuthManager, table:
 def write_bytes(proc: subprocess.Popen, data: bytes) -> None:
     if proc.stdin is None:
         raise RuntimeError("mysql process stdin is not available")
-    proc.stdin.write(data)
+    try:
+        proc.stdin.write(data)
+    except (BrokenPipeError, OSError, ValueError) as exc:
+        rc = proc.poll()
+        raise RuntimeError(f"mysql process closed stdin while receiving streamed SQL; exit_code={rc}") from exc
 
 
 def write_sql(proc: subprocess.Popen, sql: str) -> None:
@@ -1593,12 +1634,8 @@ def run_mysql_stream(
     try:
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, env=auth.child_env())
         register_active_process(proc, description)
-        if args.disable_binlog:
-            write_sql(proc, "SET SESSION sql_log_bin=0;\n")
-        write_sql(proc, "SET SESSION foreign_key_checks=0;\n")
-        write_sql(proc, "SET SESSION unique_checks=0;\n")
-        if data_mode and not args.no_transaction:
-            write_sql(proc, "SET SESSION autocommit=0;\n")
+        write_common_session_init_to_proc(proc, args, data_mode=data_mode)
+        flush_stdin(proc, description)
         if database:
             write_sql(proc, f"USE {sql_ident(database)};\n")
         total = len(files)
@@ -1657,10 +1694,8 @@ def import_structure_stream(args: argparse.Namespace, auth: AuthManager, db_plan
     try:
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, env=auth.child_env())
         register_active_process(proc, "all structures")
-        if args.disable_binlog:
-            write_sql(proc, "SET SESSION sql_log_bin=0;\n")
-        write_sql(proc, "SET SESSION foreign_key_checks=0;\n")
-        write_sql(proc, "SET SESSION unique_checks=0;\n")
+        write_common_session_init_to_proc(proc, args, data_mode=False)
+        flush_stdin(proc, "all structures")
         for db in db_plans:
             stream_drop_database_if_requested(proc, args, db)
             db_structure_file = prepare_db_structure_file(args, db, temp_files)
@@ -1885,7 +1920,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.set_defaults(fail_fast=True)
     parser.add_argument("--mysql", default="mysql", help="mysql client path; default: mysql")
     parser.add_argument("--mysql-extra-args", default=None,
-                        help="extra mysql client arguments parsed with shell-like quoting, e.g. '--ssl-mode=REQUIRED --connect-timeout=10'")
+                        help="extra mysql client arguments parsed with shlex shell-like quoting; for complex values prefer repeated --mysql-extra-arg")
     parser.add_argument("--mysql-extra-arg", action="append", default=None,
                         help="append one raw mysql client argument; can be repeated, e.g. --mysql-extra-arg=--ssl-mode=REQUIRED")
     parser.add_argument("--input-mode", choices=["source", "stream"], default="source",
@@ -1963,6 +1998,7 @@ def validate_args(args: argparse.Namespace) -> None:
             extra_args.extend(shlex.split(args.mysql_extra_args))
         except ValueError as exc:
             die(f"invalid --mysql-extra-args: {exc}")
+        LOGGER.debug("parsed --mysql-extra-args with shlex into: %s", extra_args)
     if args.mysql_extra_arg:
         extra_args.extend(args.mysql_extra_arg)
     for item in extra_args:

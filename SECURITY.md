@@ -1,26 +1,11 @@
 # Security Policy
 
-## Sensitive information
+请不要在公开 Issue、PR、截图或日志中包含以下信息：
 
-Do not publish real RDS backup download URLs, passwords, IP addresses, table data,
-or complete restore logs in public issues or pull requests. RDS backup URLs may
-contain temporary authorization information or business-sensitive paths.
+- 真实 RDS 备份下载 URL
+- 数据库密码、临时 token、AK/SK
+- 公网 IP、内网 IP、业务域名
+- 包含业务数据的 SQL 片段或恢复日志
+- 解压后的备份文件
 
-## Supported authentication methods
-
-This project intentionally does not support `MYSQL_PWD`. Use one of the following
-methods instead:
-
-- `--ask-password`
-- `--password-file`
-- `--defaults-extra-file`
-- `--login-path`
-
-The default `--ask-password` and `--password-file` paths create a temporary MySQL
-client option file with `0600` permissions and remove it after use.
-
-## Reporting a security issue
-
-If the repository has private vulnerability reporting enabled, please use that
-GitHub feature. Otherwise, contact the maintainers privately before opening a
-public issue.
+本项目不支持 `MYSQL_PWD`。推荐使用 `--ask-password`、`--password-file`、`--defaults-extra-file` 或 `--login-path`。

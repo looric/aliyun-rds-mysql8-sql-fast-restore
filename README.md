@@ -1,22 +1,18 @@
-# 阿里云RDS MySQL 8.x 快照备份快速恢复到自建数据库
-
+# 阿里云RDS MySQL 8.x 快照备份SQL文件快速恢复到自建数据库
 
 <p align="center">
   <b>将阿里云 RDS MySQL 云盘实例“下载备份”得到的 SQL 文件目录快速恢复到自建 MySQL 8.x</b><br>
   SQL-only · Python 3.6.8+ · Linux only · Zero dependencies · 表级并发导入
-  </p>
+</p>
 
-<p align="center">        
-  <img alt="Version" src="https://img.shields.io/badge/release-v260605-blue">  
+<p align="center">
+  <img alt="Version" src="https://img.shields.io/badge/release-v260606-blue">
   <img alt="Python 3.6+" src="https://img.shields.io/badge/python-3.6%2B-blue">
   <img alt="Linux only" src="https://img.shields.io/badge/platform-Linux-lightgrey">
   <img alt="MySQL 8.x" src="https://img.shields.io/badge/mysql-8.x-orange">
   <img alt="SQL only" src="https://img.shields.io/badge/mode-SQL--only-success">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey">
-  <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green"> 
-   <a href="https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml"><img src="https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
-
 
 ## 项目定位
 
@@ -28,9 +24,7 @@
 
 ## 版本
 
-当前初始化发布版本：`v260605`
-
-English quick-start: [README_EN.md](README_EN.md)
+当前初始化发布版本：`v260606`
 
 查看脚本版本：
 
@@ -257,17 +251,8 @@ python3 restore_sql_fast.py /home/mysql/data 127.0.0.1 3306 root \
 
 ## 安装
 
-### 方式一：从 GitHub Release 下载单文件
-
 ```bash
-wget https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
-chmod +x restore_sql_fast.py
-```
-
-### 方式二：克隆仓库
-
-```bash
-git clone https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore.git
+git clone https://github.com/YOUR_NAME/aliyun-rds-mysql8-sql-fast-restore.git
 cd aliyun-rds-mysql8-sql-fast-restore
 chmod +x restore_sql_fast.py
 ```
@@ -369,8 +354,8 @@ python3 restore_sql_fast.py /home/mysql/data 127.0.0.1 3306 root --login-path=re
 | `--detect-limit 8M` | `8M` | 扫描结构文件以检测库名和建库语句；`0` 表示完整扫描。 |
 | `--disable-binlog` | 关闭 | 当前导入会话执行 `SET SESSION sql_log_bin=0`。有复制、GTID、PITR 时慎用。 |
 | `--max-allowed-packet 1G` | `1G` | MySQL client 侧 packet 上限；服务端也要配置。 |
-| `--mysql-extra-arg ARG` | - | 追加一个 MySQL 客户端参数，可重复。 |
-| `--mysql-extra-args "..."` | - | 传递多个 MySQL 客户端参数，例如 SSL 或 local infile。 |
+| `--mysql-extra-arg ARG` | - | 追加一个原始 MySQL 客户端参数，可重复；复杂参数优先使用该方式。 |
+| `--mysql-extra-args "..."` | - | 按 `shlex` shell 风格拆分多个 MySQL 客户端参数；引号复杂时建议改用 `--mysql-extra-arg`。 |
 | `--log-file restore.log` | - | 同时写 DEBUG 级别日志到文件。 |
 | `--dry-run` | 关闭 | 只检查计划，不执行导入。 |
 
@@ -577,6 +562,19 @@ SHOW VARIABLES LIKE 'max_allowed_packet';
 --max-allowed-packet 1G
 ```
 
+### `Broken pipe` / `mysql process closed stdin`
+
+通常表示 mysql 客户端已先因为 SQL 错误、连接中断、权限问题或服务端主动断开而退出，脚本继续向 stdin 写入 SQL 时发现管道已关闭。
+
+排查顺序：
+
+1. 查看当前错误之前的第一条 MySQL 报错，优先处理第一现场错误。
+2. 检查 `--log-file restore.log` 中对应表名和 SQL 分片。
+3. 确认 MySQL Server 没有 OOM、重启或连接超时。
+4. 如果路径中包含特殊字符，尝试 `--input-mode stream`。
+
+脚本会在异常路径中关闭 stdin、终止仍活跃的 mysql 子进程，并输出更明确的错误信息。
+
 ### 密码输入含不可见字符
 
 如果交互式粘贴密码时混入末尾 `NUL` 字符，脚本会自动移除并输出 warning。若 `NUL` 位于密码中间，或者密码包含换行 / 回车，脚本会拒绝执行，避免生成错误的 MySQL option file。
@@ -597,13 +595,9 @@ python3 -m py_compile restore_sql_fast.py
 python3 -m unittest discover -s tests -v
 ```
 
-项目包含 GitHub Actions CI 示例：
+当前测试覆盖目录识别、库名检测、结构 SQL 改写、生成列改写、密码处理、source 路径检查、manifest 会话参数、stdin BrokenPipe 处理、SQL 解析辅助函数等核心逻辑。
 
-```text
-.github/workflows/ci.yml
-```
-
-CI 默认在 Python 3.8 / 3.10 / 3.12 上运行语法检查和单元测试，并保留 Python 3.6 grammar 兼容检查。Python 3.6.8 是运行兼容底线；如果你有自托管 runner，也可以额外加入 Python 3.6.8 实机测试。
+项目包含 GitHub Actions CI 示例。由于 GitHub 托管镜像对 Python 3.6 支持有限，CI 默认在较新 Python 上运行语法与单元测试，并保留 Python 3.6 grammar 兼容检查。
 
 ## 非目标
 
@@ -635,4 +629,4 @@ CI 默认在 Python 3.8 / 3.10 / 3.12 上运行语法检查和单元测试，并
 
 ## 许可协议
 
-本项目使用 MIT License，详见 [LICENSE](LICENSE)。
+本项目使用 MIT License，详见 `LICENSE` 文件。

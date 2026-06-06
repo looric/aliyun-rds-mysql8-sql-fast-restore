@@ -7,6 +7,8 @@ instance.
 > Primary documentation is in [README.md](README.md). This English README is a
 > concise quick-start guide for international users.
 
+Current release: `v260606`
+
 ## Highlights
 
 - **SQL-only**: designed for SQL backup directories, not CSV exports.
@@ -62,7 +64,7 @@ local_infile=1
 From source:
 
 ```bash
-git clone https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore.git
+git clone https://github.com/<OWNER>/aliyun-rds-mysql8-sql-fast-restore.git
 cd aliyun-rds-mysql8-sql-fast-restore
 chmod +x restore_sql_fast.py
 ```
@@ -70,7 +72,7 @@ chmod +x restore_sql_fast.py
 From GitHub Releases after you publish the project:
 
 ```bash
-wget https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
+wget https://github.com/<OWNER>/aliyun-rds-mysql8-sql-fast-restore/releases/latest/download/restore_sql_fast.py
 chmod +x restore_sql_fast.py
 ```
 
