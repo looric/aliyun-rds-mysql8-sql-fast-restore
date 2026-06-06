@@ -12,6 +12,7 @@
   <img alt="MySQL 8.x" src="https://img.shields.io/badge/mysql-8.x-orange">
   <img alt="SQL only" src="https://img.shields.io/badge/mode-SQL--only-success">
   <img alt="Zero dependencies" src="https://img.shields.io/badge/dependencies-stdlib%20only-lightgrey">
+  <a href="https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml"><img src="https://github.com/looric/aliyun-rds-mysql8-sql-fast-restore/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 ## 项目定位
